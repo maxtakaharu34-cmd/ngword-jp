@@ -1,0 +1,107 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no" />
+<meta name="theme-color" content="#1a0030" />
+<title>NGワードゲーム</title>
+<link href="https://fonts.googleapis.com/css2?family=Mochiy+Pop+P+One&family=Kosugi+Maru&display=swap" rel="stylesheet"/>
+<style>
+*{box-sizing:border-box}html,body{margin:0;padding:0;height:100%;overflow:hidden}
+body{font-family:"Kosugi Maru",system-ui,sans-serif;color:#fff;background:linear-gradient(180deg,#3a0040,#0a0020);touch-action:manipulation;user-select:none;-webkit-tap-highlight-color:transparent}
+#app{display:flex;flex-direction:column;height:100dvh;padding:14px;gap:10px;max-width:480px;margin:0 auto;align-items:center}
+.title{font-family:"Mochiy Pop P One",sans-serif;font-size:24px;color:#ffe066;-webkit-text-stroke:2.5px #000;paint-order:stroke fill;text-shadow:3px 3px 0 #ff5fa2;margin:8px 0}
+.setup{background:rgba(0,0,0,.4);border:2px solid #ffe066;border-radius:14px;padding:14px;width:100%;display:flex;flex-direction:column;gap:8px}
+.setup label{font-size:11px;font-weight:bold;color:#ffe066}
+.setup input{background:rgba(255,255,255,.1);border:2px solid #ffe066;color:#fff;border-radius:8px;padding:10px;font-size:15px;font-family:inherit;width:100%}
+.players{flex:1;width:100%;background:rgba(0,0,0,.4);border:2px solid #ffe066;border-radius:14px;padding:14px;overflow-y:auto;display:flex;flex-direction:column;gap:6px}
+.player{display:flex;justify-content:space-between;align-items:center;background:rgba(255,255,255,.05);padding:8px 12px;border-radius:10px}
+.player .nm{font-weight:bold}
+.player .word{background:#000;color:#000;padding:4px 10px;border-radius:8px;font-size:13px;cursor:pointer;border:1.5px solid #ffe066;letter-spacing:.1em}
+.player .word.shown{background:#ffe066;color:#1a0030}
+.go{background:#ffe066;color:#000;border:3px solid #000;padding:12px;font-family:"Mochiy Pop P One",sans-serif;font-size:14px;border-radius:12px;cursor:pointer;box-shadow:3px 3px 0 #000;width:100%}
+.go:active{transform:translate(2px,2px);box-shadow:1px 1px 0 #000}
+.actions{display:flex;gap:8px;width:100%;justify-content:center}
+.actions button{flex:1;background:#fff;color:#1a0030;border:3px solid #000;padding:10px;font-family:"Mochiy Pop P One",sans-serif;font-size:13px;border-radius:12px;cursor:pointer;box-shadow:3px 3px 0 #000}
+.actions .red{background:#ef4444;color:#fff}
+.note{font-size:10px;text-align:center;opacity:.7;line-height:1.5}
+.add-row{display:flex;gap:6px}
+.add-row input{flex:1}
+.add-row button{flex:0 0 auto;background:#5fc4ff;color:#000;border:2px solid #000;padding:0 14px;border-radius:8px;font-family:"Mochiy Pop P One",sans-serif;font-size:12px;cursor:pointer}
+</style>
+</head>
+<body>
+<div id="app">
+<h1 class="title">NGワード 🤐</h1>
+<div class="setup" id="setup">
+  <label>プレイヤー名（1人ずつ追加）</label>
+  <div class="add-row">
+    <input id="pn" type="text" placeholder="例: たろう" maxlength="20"/>
+    <button id="btn-add">＋</button>
+  </div>
+  <div id="list" style="font-size:12px;display:flex;flex-wrap:wrap;gap:4px"></div>
+  <button class="go" id="btn-start">🎲 NGワードを配る</button>
+</div>
+<div class="players" id="players" style="display:none"></div>
+<div class="actions" style="display:none" id="actions">
+  <button id="btn-redo">🔄 NG再配布</button>
+  <button id="btn-back" class="red">↺ 最初から</button>
+</div>
+<div class="note" id="note">遊び方: 各プレイヤーがNGワードをこっそり確認 → 会話の中で他人にそのワードを言わせたら勝ち！</div>
+</div>
+<script>
+(()=>{
+'use strict';
+const NG_WORDS=['わかる','たぶん','やばい','すごい','まじで','ぶっちゃけ','普通に','一応','ちなみに','逆に','ていうか','まぁ','確かに','ほんと','ですね','たしか','なんか','とりあえず','基本','正直','でも','けど','つまり','ようは','要するに','こう','まじ','うん','そう','だから','ちょっと','けっこう','超','めっちゃ'];
+const $=(id)=>document.getElementById(id);
+let players=[];
+function renderList(){
+  const l=$('list');while(l.firstChild)l.removeChild(l.firstChild);
+  players.forEach((p,i)=>{
+    const s=document.createElement('span');s.style.background='rgba(255,255,255,.1)';s.style.padding='3px 8px';s.style.borderRadius='999px';s.textContent='👤 '+p.name;
+    s.style.cursor='pointer';s.title='削除';s.addEventListener('click',()=>{players.splice(i,1);renderList()});
+    l.appendChild(s);
+  });
+}
+function add(){
+  const v=$('pn').value.trim();if(!v)return;
+  if(players.length>=20)return;
+  players.push({name:v,word:''});$('pn').value='';renderList();
+}
+function deal(){
+  if(players.length<2){alert('2人以上必要');return}
+  // pick distinct NG words
+  const pool=[...NG_WORDS].sort(()=>Math.random()-0.5);
+  players.forEach((p,i)=>p.word=pool[i%pool.length]);
+  $('setup').style.display='none';
+  $('players').style.display='';$('actions').style.display='';$('note').style.display='none';
+  render();
+}
+function render(){
+  const e=$('players');while(e.firstChild)e.removeChild(e.firstChild);
+  players.forEach(p=>{
+    const r=document.createElement('div');r.className='player';
+    const n=document.createElement('div');n.className='nm';n.textContent='👤 '+p.name;
+    const w=document.createElement('div');w.className='word';w.textContent='タップで表示';
+    let shown=false;
+    w.addEventListener('click',()=>{
+      shown=!shown;
+      w.classList.toggle('shown',shown);
+      w.textContent=shown?p.word:'タップで表示';
+      beep(shown?660:330,.06);
+    });
+    r.appendChild(n);r.appendChild(w);
+    e.appendChild(r);
+  });
+}
+let ac=null;const en=()=>{if(!ac)ac=new(window.AudioContext||window.webkitAudioContext)();if(ac.state==='suspended')ac.resume();return ac};
+const beep=(f,d,t='triangle',g=.1)=>{const a=en();const o=a.createOscillator();const gn=a.createGain();o.type=t;o.frequency.value=f;gn.gain.value=g;gn.gain.exponentialRampToValueAtTime(.0001,a.currentTime+d);o.connect(gn).connect(a.destination);o.start();o.stop(a.currentTime+d)};
+$('btn-add').addEventListener('click',add);
+$('pn').addEventListener('keydown',e=>{if(e.key==='Enter')add()});
+$('btn-start').addEventListener('click',()=>{en();deal()});
+$('btn-redo').addEventListener('click',()=>{en();deal()});
+$('btn-back').addEventListener('click',()=>{$('setup').style.display='';$('players').style.display='none';$('actions').style.display='none';$('note').style.display=''});
+})();
+</script>
+</body>
+</html>
